@@ -22,11 +22,10 @@ The following are the steps taken to build a vehicle detection pipeline::
 [image6]: ./output_images/not_car_hist.png
 [image7]: ./output_images/slide_window.png
 [image8]: ./output_images/search_detect.png
-[image9]: ./output_images/heat_map.png
-[image10]: ./output_images/labels_map.png
-[image11]: ./output_images/output_bboxes.png
+[image9]: ./output_images/heatmap.png
+[image10]: ./output_images/algo_diagram.png
 [image12]: ./output_images/f_vec.png
-[video1]: ./project_video.mp4
+
 
 
 ### Feature Extraction: Spatial Binning of Color, Color Historgrams, and Histogram of Oriented Gradients (HOG)
@@ -218,18 +217,18 @@ Code realated to the SVM can also be found in code cells 21 through 28 in the `V
 ---
 
 Slide window search takes a patch of an image (**The patch is the region of the image where vehicles are expected
-to be seen**) and divides it into overlapping fixed sized windows. The coordinates of each window/box is 
+to be seen**) and divides it into overlapping fixed sized windows. The coordinates of each window/box are 
 recorded and its contents will be put through an SVM to check whether a vehicle is present. Below is a graphical
 represenation of slide window search over a predetermined region of interest.
 
 ![slide][image7]
 
-A challenge with slide window search is that vehicles appear to be of different sizes depending on their distance 
-from camera. In order to capture varying sizes of vehicles without having to use different sizes of windows, the 
-`xy_window` and the `xy_overlap` parameters were tuned. By selecting a relatively large window with high overlap 
-percentage, the SVM is able to detect vehicles of different sizes robustly. After testing several `xy_window` and 
-the `xy_overlap` the following values were selected based on a healthy number of overlapping windows detecting the 
-same vehicle. 
+The challenge with slide window search is that vehicles appear to be of different sizes depending on their distance 
+from the camera. In order to capture varying sizes of vehicles without having to use different sizes of windows,
+the `xy_window` and the `xy_overlap` parameters were tuned. By selecting a relatively large window with high
+overlap percentage, the SVM is able to detect vehicles of different sizes robustly. After testing several
+`xy_window` and the `xy_overlap` the following values were selected based on a healthy number of overlapping
+windows detecting the same vehicle. 
 
 The parameters choses are the following:
 
@@ -244,42 +243,111 @@ Code realated to the Slide Window Search can also be found in code cells 30 and 
 ### Search and Classify
 ---
 
-####2. Show some examples of test images to demonstrate how your pipeline is working.  What did you do to optimize the performance of your classifier?
+Using the coordinates of the windows/boxes obtained from Slide Window Search, the features of each window were
+extracted and ran through a SVM classifier to determine whether a vehicle is present in it. Windows with a vehicle
+detected in them are called hot windows. The coordinates of all hot windows are recorded to build a heat map of
+detectionts. It is important to note that windows of only one size were used to detect vehicles of different sizes.
+This was possible by selecting appropriate `xy_window` and the `xy_overlap` parameters in the Slide Window Search.
+Below are examples of overlapping hot windows over vehicles:
 
-Ultimately I searched on two scales using YCrCb 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a nice result.  Here are some example images:
 
 ![detect][image8]
 
 
+The code below was used to detect hot windows:
+
+```
+def search_for_cars(image, window_boxes, svc, scaler, cspace='RGB', spatial_size=(32, 32), hist_bins=32, 
+hist_range=(0, 256), orient=9, pix_per_cell=8, cell_per_block=2, hog_channel='ALL'):
+
+# Extract all window boxes where a vehicle was detected
+hot_windows = []
+for box in window_boxes: 
+
+# Extract image patch from original image and resize to 64 x 64
+# Images used to train the model were all of size 64 by 64.
+# It is imperative to extract the same amount of features so that the classifier works correctly
+image_patch = cv2.resize(image[box[0][1]:box[1][1], box[0][0]:box[1][0]], (64, 64))      
+
+# Extract features from current image in frame
+features = extract_image_features(image_patch, cspace, spatial_size, hist_bins, hist_range, 
+hist_channels, orient, pix_per_cell, cell_per_block, hog_channel)
+
+# Scale extracted features to be fed to the classifier
+test_features = scaler.transform(np.array(features).reshape(1, -1))
+
+#Predict using your classifier
+prediction = svc.predict(test_features)
+# If positive (prediction == 1) then save the window
+if prediction == 1:
+hot_windows.append(box)
+
+return hot_windows
+```
+
+Code realated to search and classfication  can also be found in code cells 32 through 34 in the `Vehicle Detection and Tracking - Oscar Argueta.ipynb` **IPython notebook**.
+
 ### Heat Maps and Outlier Removal
+--- 
 
+In order to remove outliers(false positives) from random frames, the hot windows were used to build a heatmap
+such that areas of multiple detections get "hot", while areas with false positives stay "cool" and effectively
+remove the outlier
 
-####2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
+The steps to build a heatmap are the following:
+1. Create a matrix of zeros of the size of the image
+2. Add 1 to each pixel location contained in each hot window
+3. Threshold the heatmap to remove "cool" values
 
-I recorded the positions of positive detections in each frame of the video.  From the positive detections I created a heatmap and then thresholded that map to identify vehicle positions.  I then used `scipy.ndimage.measurements.label()` to identify individual blobs in the heatmap.  I then assumed each blob corresponded to a vehicle.  I constructed bounding boxes to cover the area of each blob detected.  
+The code below was used for building and thresholding heat maps:
+```
+# Function to populate Heatmap
+def add_heat(heatmap, bbox_list):
+# Iterate through list of bboxes
+for box in bbox_list:
+# Add += 1 for all pixels inside each bbox
+# Assuming each "box" takes the form ((x1, y1), (x2, y2))
+heatmap[box[0][1]:box[1][1], box[0][0]:box[1][0]] += 1
 
-Here's an example result showing the heatmap from a series of frames of video, the result of `scipy.ndimage.measurements.label()` and the bounding boxes then overlaid on the last frame of video:
+# Return updated heatmap
+return heatmap
 
-### Here are six frames and their corresponding heatmaps:
+# Function to apply threshold to the heat map to discard cool zones - areas where vehicles are not present
+def apply_threshold(heatmap, threshold):
+# Zero out pixels below the threshold
+heatmap[heatmap <= threshold] = 0
+# Return thresholded map
+return heatmap
 
-![alt text][image5]
+```
 
-### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
-![alt text][image6]
+The next step was to use the `scipy.ndimage.measurements.label()` function to to identify individual blobs in the
+heat map. Under the assumption that each blob corresponded to a vehicle, bounding boxes were constructed to cover the
+area of each blob detected.
 
-### Here the resulting bounding boxes are drawn onto the last frame in the series:
-![alt text][image7]
+Here's an example result showing the heatmap from a series of frames of video and the bounding boxes overlaid on
+original image frame:
+ 
+![heat][image9]
 
-
+Code realated to heat maps can also be found in code cells 35 through 37 in the `Vehicle Detection and Tracking - Oscar Argueta.ipynb` **IPython notebook**.
 
 ### Video Implementation
 ---
+The function **`process_frame()`** returns the original image frame with bounding boxes drawn around the vehicles detected. A special class called `HeatQueue` was made to track and sum the heatmaps of 25 frames to optimize outlier removal and smoother temporal performance. A flow diagram describing the function **`process_frame()`** is seen below.
 
-Pipeline figure
+![algo][image10]
 
-####1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (somewhat wobbly or unstable bounding boxes are ok as long as you are identifying the vehicles most of the time with minimal false positives.)
-Here's a [link to my video result](./project_video.mp4)
+The code for the `HeatQueue` class can be seen below:
 
+
+Code realated to the `process_frame()` function  can also be found in code cells 38 through 42 in the `Vehicle Detection and Tracking - Oscar Argueta.ipynb` **IPython notebook**.
+
+
+#### Final Output (video) 
+
+<a href="https://www.youtube.com/embed/ztvgLcQjkjc target="_blank"><img src="http://img.youtube.com/vi/ztvgLcQjkjc/0.jpg" 
+alt="IMAGE ALT TEXT HERE" width="480" height="360" border="10" /></a>
 
 
 ---
