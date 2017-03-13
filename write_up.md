@@ -2,8 +2,8 @@
 
 ### Objective
 An important function of an autonomous vehicle is to be able to detect and track vehicles around it. For this project, the objective is to explore a method of detecting vehicles using a linear support vector machine (SVM) and write a software pipeline to detect vehicles on a continous video stream.
-### Algorithm Overview
-The goals/steps of this project to reliably detect vehicles are the following:
+### Overview
+The following are the steps taken to build a vehicle detection pipeline::
 
 1. Perform a Histogram of Oriented Gradients (HOG) feature extraction on a labeled training set of images.
 2. Apply a color transform and append binned color features, as well as histograms of color, to the HOG feature vector. 
@@ -20,15 +20,15 @@ The goals/steps of this project to reliably detect vehicles are the following:
 [image4]: ./output_images/color_bin.png
 [image5]: ./output_images/car_hist.png
 [image6]: ./output_images/not_car_hist.png
-[image7]: ./output_images/sliding_windows.png
-[image8]: ./output_images/sliding_window.png
-[image9]: ./output_images/bboxes_and_heat.png
+[image7]: ./output_images/slide_window.png
+[image8]: ./output_images/search_detect.png
+[image9]: ./output_images/heat_map.png
 [image10]: ./output_images/labels_map.png
 [image11]: ./output_images/output_bboxes.png
 [image12]: ./output_images/f_vec.png
 [video1]: ./project_video.mp4
 
----
+
 ### Feature Extraction: Spatial Binning of Color, Color Historgrams, and Histogram of Oriented Gradients (HOG)
 ---
 A crucial step to having a high performance classifier is selecting the right features for training that result in high accuracy and speed. For each image in the labeled dataset a feature vector was constructed to train an SVM classifier. The selected features include:
@@ -66,20 +66,22 @@ def spatial_bin(image, new_size=(32,32)):
     features = cv2.resize(image, new_size).ravel()
     return features
 ```
-This code can also be found in code cells 9 and 10 in the `Vehicle Detection - Oscar Argueta.ipynb` **IPython notebook**.
+This code can also be found in code cells 9 and 10 in the `Vehicle Detection and Tracking - Oscar Argueta.ipynb` **IPython notebook**.
 
 #### Feature 2: Color Histogram
+
 The distribution of pixels/color across channels can provide shape invariant information about objects in an image. By picking the right color space useful information extraction can be maximized. The color histogram from vehicle and non-vehicle images was computed accross several color spaces. Color Spaces that provide information about color saturation seemed to provide the best signatures overall; therefore **YCbCr** was selected to keep the feature extraction pipeline simple. Below, an example of the histogram of each color channel for vehicle and non-vehicle images:
 
-###### Vehicle Color Histogram YCbCr Color Space
+###### **Vehicle Color Histogram YCbCr Color Space**
 
 ![car hist][image5]
 
-###### Non-Vehicle Color Histogram YCbCr Color Space
+###### **Non-Vehicle Color Histogram YCbCr Color Space**
 
 ![ not car hist][image6]
 
 The code below was used to obtain the color histogram feature vector of images:
+
 ```
 def color_hist(img, nbins=32, bins_range=(0, 256), hist_channels='ALL', vis=False):
     # Compute the histogram of the color channels separately
@@ -121,7 +123,7 @@ Here is an example of HOG features using the `YCrCb` color space and the selecte
 
 ![hog][image2]
 
-The code below was used to to extract the HOG feature vector from an image:
+The code below was used to to extract the HOG feature vector from images:
 ```
 def get_hog_features(img, orient, pix_per_cell, cell_per_block, vis=False, feature_vec=True):
     # Call with two outputs if vis==True
@@ -138,12 +140,12 @@ def get_hog_features(img, orient, pix_per_cell, cell_per_block, vis=False, featu
         return features
 ```
 
-Code realated to HOG can also be found in code cells 16 through 20 in the `Vehicle Detection - Oscar Argueta.ipynb` **IPython notebook**.
+Code realated to HOG can also be found in code cells 16 through 20 in the `Vehicle Detection and Tracking - Oscar Argueta.ipynb` **IPython notebook**.
 
----
+
 ### Support Vector Machine(SVM) Classifier
 ---
-A support vector machine(SVM) was used to classify the contents of image frames to locate vehicle objects in a video stream. To train that clasiffier, a dataset containing examples of vehicle and non-vehicle images was used. From each sample three features (HOG, Color Histogram, Spatial Binning) were extracted into a single 1-dimensional feature vector as seen below.
+A support vector machine(SVM) was used to classify the contents of image frames to locate vehicle objects in a video stream. To train clasiffier, a dataset containing examples of vehicle and non-vehicle images was used. From each sample three, features (HOG, Color Histogram, Spatial Binning) were extracted into a single 1-dimensional feature vector as seen below.
 
 ![ not car hist][image12]
 
@@ -181,7 +183,7 @@ def extract_image_features(image_file, cspace='RGB', spatial_size=(32,32),hist_b
     return features
 ```
 
-After extracting all features from the vehicle and non-vehicle data sets, the following steps were taken
+After extracting all features from the vehicle and non-vehicle datasets, the following steps were taken
 to prepare the training data for the SVM:
 
 1. Combine vehicle and non-vehicle data
@@ -190,6 +192,7 @@ to prepare the training data for the SVM:
 4. Shuffle and create a train-test split
 
 The code below shos the steps discussed above:
+
 ```
 # Stack features
 X = np.vstack((vehicle_features, non_vehicle_features)).astype(np.float64)
@@ -206,17 +209,89 @@ rand_state = np.random.randint(0, 100)
 X_train, X_test, y_train, y_test = train_test_split(scaled_X, Y, test_size=0.2, random_state=rand_state)
 ```
 
-After training, the SVM achieve an accuracy of **0.9977** (99.77%) on the test set.
+After training with default parameters, the SVM achieved an accuracy of **0.9977** (99.77%) on the test set.
 
-Code realated to the SVM can also be found in code cells 21 through 28 in the `Vehicle Detection - Oscar Argueta.ipynb` **IPython notebook**.
+Code realated to the SVM can also be found in code cells 21 through 28 in the `Vehicle Detection and Tracking - Oscar Argueta.ipynb` **IPython notebook**.
 
 
----
 ### Sliding Window Search
 ---
 
+Slide window search takes a patch of an image (**The patch is the region of the image where vehicles are expected
+to be seen**) and divides it into overlapping fixed sized windows. The coordinates of each window/box is 
+recorded and its contents will be put through an SVM to check whether a vehicle is present. Below is a graphical
+represenation of slide window search over a predetermined region of interest.
+
+![slide][image7]
+
+A challenge with slide window search is that vehicles appear to be of different sizes depending on their distance 
+from camera. In order to capture varying sizes of vehicles without having to use different sizes of windows, the 
+`xy_window` and the `xy_overlap` parameters were tuned. By selecting a relatively large window with high overlap 
+percentage, the SVM is able to detect vehicles of different sizes robustly. After testing several `xy_window` and 
+the `xy_overlap` the following values were selected based on a healthy number of overlapping windows detecting the 
+same vehicle. 
+
+The parameters choses are the following:
+
+1. `x_start_stop` = `[None, None]`
+2. `y_start_stop` = `[380, 625]`
+3. `xy_window` = `(80, 80)` 
+4. `xy_overlap` = `(0.75, 0.75)`
+
+Code realated to the Slide Window Search can also be found in code cells 30 and 31 in the `Vehicle Detection and Tracking - Oscar Argueta.ipynb` **IPython notebook**.
+
+
+### Search and Classify
+---
+
+####2. Show some examples of test images to demonstrate how your pipeline is working.  What did you do to optimize the performance of your classifier?
+
+Ultimately I searched on two scales using YCrCb 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a nice result.  Here are some example images:
+
+![detect][image8]
+
+
+### Heat Maps and Outlier Removal
+
+
+####2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
+
+I recorded the positions of positive detections in each frame of the video.  From the positive detections I created a heatmap and then thresholded that map to identify vehicle positions.  I then used `scipy.ndimage.measurements.label()` to identify individual blobs in the heatmap.  I then assumed each blob corresponded to a vehicle.  I constructed bounding boxes to cover the area of each blob detected.  
+
+Here's an example result showing the heatmap from a series of frames of video, the result of `scipy.ndimage.measurements.label()` and the bounding boxes then overlaid on the last frame of video:
+
+### Here are six frames and their corresponding heatmaps:
+
+![alt text][image5]
+
+### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
+![alt text][image6]
+
+### Here the resulting bounding boxes are drawn onto the last frame in the series:
+![alt text][image7]
 
 
 
+### Video Implementation
+---
 
+Pipeline figure
+
+####1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (somewhat wobbly or unstable bounding boxes are ok as long as you are identifying the vehicles most of the time with minimal false positives.)
+Here's a [link to my video result](./project_video.mp4)
+
+
+
+---
+
+### Discussion
+
+####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
+
+Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+
+
+- notes for conclusion
+Very innefficient, would have to search and extract HOG features for each window. HOG is an expensive operation and since the "Search boxes" overlap we would be doing 2X unnecessary computations.
+The total number of windows to search per frame: **610*
 
