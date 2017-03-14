@@ -2,6 +2,7 @@
 
 ### Objective
 An important function of an autonomous vehicle is to be able to detect and track vehicles around it. For this project, the objective is to explore a method of detecting vehicles using a linear support vector machine (SVM) and write a software pipeline to detect vehicles on a continous video stream.
+
 ### Overview
 The following are the steps taken to build a vehicle detection pipeline::
 
@@ -322,8 +323,8 @@ return heatmap
 ```
 
 The next step was to use the `scipy.ndimage.measurements.label()` function to to identify individual blobs in the
-heat map. Under the assumption that each blob corresponded to a vehicle, bounding boxes were constructed to cover the
-area of each blob detected.
+heat map. Under the assumption that each blob corresponded to a vehicle, bounding boxes were constructed to cover
+the area of each blob detected.
 
 Here's an example result showing the heatmap from a series of frames of video and the bounding boxes overlaid on
 original image frame:
@@ -336,9 +337,38 @@ Code realated to heat maps can also be found in code cells 35 through 37 in the 
 ---
 The function **`process_frame()`** returns the original image frame with bounding boxes drawn around the vehicles detected. A special class called `HeatQueue` was made to track and sum the heatmaps of 25 frames to optimize outlier removal and smoother temporal performance. A flow diagram describing the function **`process_frame()`** is seen below.
 
-![algo][image10]
+<img src="output_images/algo_diagram.png" style="width:500px;height:650px;">
 
 The code for the `HeatQueue` class can be seen below:
+```
+class HeatQueue:
+def __init__(self, limit):
+self._heat_frames = []
+self._queue_limit = limit
+self.queue_size = 0
+
+@property
+def queue_limit(self):
+return self._queue_limit
+
+@property
+def heat_frames(self):
+return self._heat_frames
+
+def enqueue(self, heatmap):
+self._heat_frames.insert(0, heatmap)
+if self.queue_size > self._queue_limit:
+self._dequeue()
+self.queue_size = len(self._heat_frames)
+
+def _dequeue(self):
+self._heat_frames.pop()
+self.queue_size = len(self._heat_frames)
+
+def sum_heat_frames(self):
+frames = np.array(self.heat_frames)
+return np.sum(frames, axis=0)
+```
 
 
 Code realated to the `process_frame()` function  can also be found in code cells 38 through 42 in the `Vehicle Detection and Tracking - Oscar Argueta.ipynb` **IPython notebook**.
