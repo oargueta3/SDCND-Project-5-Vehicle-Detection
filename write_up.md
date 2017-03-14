@@ -383,8 +383,6 @@ alt="IMAGE ALT TEXT HERE" width="480" height="360" border="10" /></a>
 ---
 ### Discussion
 ---
-####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
-
 Overall, the development of the pipeline was fairly straightforward. Engineering features to train the support vector machine classifier was the most time consuming portion of the project as it required trying and testing various parameters from HOG, spatial binning, color histograms to find the optimal combination features that achieve the highest SVM prediction accuracy.
 
 The perfomance of the vehicle detection pipeline is extremely robust. It detects all relevant vehicles in the video stream and does an excellent job removing outliers. The only instance where the algorithm is broken is when two or more cars are close to each other and a single bounding box is drawn over them. Unfortunately, the algorithm is slow and cannot be used to detect vehicles in real time. One way to improve the time performance of the algorithm is to compute HOG once over the region of interest instead of computing for each overlapping search window (2X extra computations). Another way to improve this is to reduce the number of features extracted from each image frame, but there is a tradeoff. With a reduce number of features the accuracy of the SVM is reduced.
