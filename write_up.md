@@ -28,7 +28,7 @@ The following are the steps taken to build a vehicle detection pipeline::
 [image12]: ./output_images/f_vec.png
 
 
-
+---
 ### Feature Extraction: Spatial Binning of Color, Color Historgrams, and Histogram of Oriented Gradients (HOG)
 ---
 A crucial step to having a high performance classifier is selecting the right features for training that result in high accuracy and speed. For each image in the labeled dataset a feature vector was constructed to train an SVM classifier. The selected features include:
@@ -142,7 +142,7 @@ def get_hog_features(img, orient, pix_per_cell, cell_per_block, vis=False, featu
 
 Code realated to HOG can also be found in code cells 16 through 20 in the `Vehicle Detection and Tracking - Oscar Argueta.ipynb` **IPython notebook**.
 
-
+---
 ### Support Vector Machine(SVM) Classifier
 ---
 A support vector machine(SVM) was used to classify the contents of image frames to locate vehicle objects in a video stream. To train clasiffier, a dataset containing examples of vehicle and non-vehicle images was used. From each sample three, features (HOG, Color Histogram, Spatial Binning) were extracted into a single 1-dimensional feature vector as seen below.
@@ -213,7 +213,7 @@ After training with default parameters, the SVM achieved an accuracy of **0.9977
 
 Code realated to the SVM can also be found in code cells 21 through 28 in the `Vehicle Detection and Tracking - Oscar Argueta.ipynb` **IPython notebook**.
 
-
+---
 ### Sliding Window Search
 ---
 
@@ -240,7 +240,7 @@ The parameters choses are the following:
 
 Code realated to the Slide Window Search can also be found in code cells 30 and 31 in the `Vehicle Detection and Tracking - Oscar Argueta.ipynb` **IPython notebook**.
 
-
+---
 ### Search and Classify
 ---
 
@@ -287,7 +287,7 @@ return hot_windows
 ```
 
 Code realated to search and classfication  can also be found in code cells 32 through 34 in the `Vehicle Detection and Tracking - Oscar Argueta.ipynb` **IPython notebook**.
-
+---
 ### Heat Maps and Outlier Removal
 --- 
 
@@ -332,10 +332,10 @@ original image frame:
 ![heat][image9]
 
 Code realated to heat maps can also be found in code cells 35 through 37 in the `Vehicle Detection and Tracking - Oscar Argueta.ipynb` **IPython notebook**.
-
+---
 ### Video Implementation
 ---
-The function **`process_frame()`** returns the original image frame with bounding boxes drawn around the vehicles detected. A special class called `HeatQueue` was made to track and sum the heatmaps of 25 frames to optimize outlier removal and smoother temporal performance. A flow diagram describing the function **`process_frame()`** is seen below.
+The function **`process_frame()`** returns the original image frame with bounding boxes drawn around the vehicles detected. A special class called `HeatQueue` was made to track and sum the heatmaps of 25 frames to optimize outlier removal and smooth temporal performance. A flow diagram describing the function **`process_frame()`** is seen below.
 
 <img src="output_images/algo_diagram.png" style="width:500px;height:650px;">
 
@@ -381,9 +381,8 @@ alt="IMAGE ALT TEXT HERE" width="480" height="360" border="10" /></a>
 
 
 ---
-
 ### Discussion
-
+---
 ####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
 Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
