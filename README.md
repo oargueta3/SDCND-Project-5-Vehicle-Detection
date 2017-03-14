@@ -4,9 +4,7 @@
 ### Overview
 An important function of an autonomous vehicle is to be able to detect and track vehicles around it. For this
 project, the objective is to explore a method of detecting vehicles using a linear support vector machine (SVM) and
-write a software pipeline to detect vehicles on a continous video stream.
-
-The following are the steps taken to build a vehicle detection pipeline:
+write a software pipeline to detect vehicles on a continous video stream. The following were the steps taken to build a vehicle detection pipeline:
 
 1. Perform a Histogram of Oriented Gradients (HOG) feature extraction on a labeled training set of images.
 2. Apply a color transform and append binned color features, as well as histograms of color, to the HOG feature vector. 
@@ -38,7 +36,7 @@ The diagram below summarizes the pipeline to process images.
 
 ## Result
 
-<a href="https://www.youtube.com/embed/j9AjvjqNx4Q target="_blank"><img src="http://img.youtube.com/vi/j9AjvjqNx4Q/0.jpg" 
+<a href="https://www.youtube.com/embed/ztvgLcQjkjc target="_blank"><img src="http://img.youtube.com/vi/ztvgLcQjkjc/0.jpg" 
 alt="IMAGE ALT TEXT HERE" width="480" height="360" border="10" /></a>
 
 
