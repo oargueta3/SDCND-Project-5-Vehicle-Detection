@@ -36,7 +36,7 @@ The diagram below summarizes the pipeline to process images.
 
 ## Result
 
-<a href="https://www.youtube.com/embed/ztvgLcQjkjc target="_blank"><img src="http://img.youtube.com/vi/ztvgLcQjkjc/0.jpg" 
+<a href="https://www.youtube.com/embed/ztvgLcQjkjc><img src="http://img.youtube.com/vi/ztvgLcQjkjc/0.jpg" 
 alt="IMAGE ALT TEXT HERE" width="480" height="360" border="10" /></a>
 
 
